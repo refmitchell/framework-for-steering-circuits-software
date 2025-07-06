@@ -63,7 +63,7 @@ def multi_sim():
 
     duration = 1000
     variance = 0.3
-    goals = util.generate_track(show=False, variance=variance, length=duration)
+    goals = util.generate_track(variance=variance, length=duration)
 
     f, axs = plt.subplots(len(models), 1, figsize=(8,1*len(models)), sharex=True)
 

@@ -68,8 +68,10 @@ class MinimalCircuit():
     
             print("Model prefs, N = {}".format(n))
             print("Compass prefs: {}".format(np.degrees(self.C_prefs)))
+            print("")
             print("SL prefs: {}".format(np.degrees(self.SL_prefs)))
             print("SR prefs: {}".format(np.degrees(self.SR_prefs)))
+            print("")            
             print("G prefs: {}".format(np.degrees(self.G_prefs)))
             print("")
     
@@ -165,7 +167,7 @@ class UnintuitiveCircuit():
             (np.real(a)*np.real(b)) + (np.imag(a)*np.imag(b)) 
             for (a,b) in zip(self.GSL_pref_vecs, self.GSR_pref_vecs)
         ]
-
+        
         # Compute vectors orthogonal to those in the left goal population
         l_perp = [ -np.imag(a) + 1j*np.real(a) for a in self.GSL_pref_vecs ]
 
@@ -189,7 +191,7 @@ class UnintuitiveCircuit():
         # the midpoint of the inner angle of the two vectors).
         
         directed_midpoint =\
-            lambda p, s: p - (np.pi - (s*self.R_w)) if s > 0 else p + (s*self.R_w)
+            lambda p, s: p - (np.pi + (s*self.R_w)) if s > 0 else p - (s*self.R_w)
 
         self.G_prefs = [
             directed_midpoint(p,s) 
@@ -208,11 +210,13 @@ class UnintuitiveCircuit():
             self.GSR_prefs = np.angle(self.GSR_pref_vecs)
 
             print("Compass prefs: {}".format(np.degrees(self.C_prefs)))
+            print("")
             print("SL prefs: {}".format(np.degrees(self.SL_prefs)))
             print("SR prefs: {}".format(np.degrees(self.SR_prefs)))
-
+            print("")
             print("GSL prefs: {}".format(np.degrees(np.angle(self.GSL_pref_vecs))))                
-            print("GSR prefs: {}".format(np.degrees(np.angle(self.GSR_pref_vecs))))                
+            print("GSR prefs: {}".format(np.degrees(np.angle(self.GSR_pref_vecs))))
+            print("")            
             print("G prefs: {}".format(np.degrees(self.G_prefs)))
             print("")      
 
@@ -237,7 +241,7 @@ class UnintuitiveCircuit():
         self.S_R = [act(x) for x in self.S_R]
         self.S_L = [act(x) for x in self.S_L]
 
-        output = (self.R_w*sum(self.S_R)) - ((1-self.R_w)*sum(self.S_L))
+        output = (self.R_w*sum(self.S_R)) - ((1-self.R_w)*sum(self.S_L)) 
 
         # Sim heading update is 
         # agent_heading -= steering
