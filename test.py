@@ -23,6 +23,7 @@ from models import UnintuitiveCircuit, MP2024
 res = np.load("DICE_result.pkl", allow_pickle=True)
 x = res.x
 
+print(x[18])
 
 samples = 10
 umodel = UnintuitiveCircuit(x, print_info=True)

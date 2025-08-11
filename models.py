@@ -50,7 +50,9 @@ class MinimalCircuit():
         self.W_csr = np.roll(np.eye(n), -1, axis=0) * d
 
         self.W_gs = np.eye(n)
-
+    
+        self.W_gsl = self.W_gs
+        self.W_gsr = self.W_gs
 
         # Infer goal neuron preferred directions
         self.SL_pref_vecs = self.W_csl @ self.C_pref_vecs
@@ -162,26 +164,26 @@ class UnintuitiveCircuit():
         # if -ve, use the midpoint of the inner angle (because this is how
         # the agent will actually steer)
 
-        # Left dot right goals
-        l_dot_r = [ 
+        # Right dot left goals
+        r_dot_l = [ 
             (np.real(a)*np.real(b)) + (np.imag(a)*np.imag(b)) 
-            for (a,b) in zip(self.GSL_pref_vecs, self.GSR_pref_vecs)
+            for (a,b) in zip(self.GSR_pref_vecs, self.GSL_pref_vecs)
         ]
-        
+
         # Compute vectors orthogonal to those in the left goal population
-        l_perp = [ -np.imag(a) + 1j*np.real(a) for a in self.GSL_pref_vecs ]
+        r_perp = [ -np.imag(a) + 1j*np.real(a) for a in self.GSR_pref_vecs ]
 
         # L perp dot right goals
-        l_perp_dot_r = [ 
+        r_perp_dot_l = [ 
             (np.real(a)*np.real(b)) + (np.imag(a)*np.imag(b)) 
-            for (a,b) in zip(l_perp, self.GSR_pref_vecs)
+            for (a,b) in zip(r_perp, self.GSL_pref_vecs)
         ]
 
         # Project the R vector onto L and L perp to give the projection into
         # a pseudo x and y axis, using atan2 to give the signed angle.
         signed_angles = [
             np.arctan2(y,x) 
-            for (x,y) in zip(l_dot_r, l_perp_dot_r)
+            for (x,y) in zip(r_dot_l, r_perp_dot_l)
         ]
 
         # A -ve sign means that R lies below the pseudo x axis given by L, and
@@ -190,13 +192,16 @@ class UnintuitiveCircuit():
         # pi to get the true midpoint of the steering neurons (rather than just
         # the midpoint of the inner angle of the two vectors).
         
+        # directed_midpoint =\
+        #     lambda p, s: p - (np.pi + (s*self.R_w)) if s > 0 else p - (s*self.R_w)
+        
         directed_midpoint =\
-            lambda p, s: p - (np.pi + (s*self.R_w)) if s > 0 else p - (s*self.R_w)
+            lambda p, s: p + (s*self.R_w) if s > 0 else p - (np.pi + (s*self.R_w))
 
         self.G_prefs = [
             directed_midpoint(p,s) 
             for (p, s) 
-            in zip(np.angle(self.GSL_pref_vecs), signed_angles)
+            in zip(np.angle(self.GSR_pref_vecs), signed_angles)
             ]
         
         self.G_prefs = [x % (2*np.pi) for x in self.G_prefs]
@@ -238,8 +243,8 @@ class UnintuitiveCircuit():
         self.S_L = np.dot(self.W_csl, self.C) + np.dot(self.W_gsl, self.G) 
         self.S_R = np.dot(self.W_csr, self.C) + np.dot(self.W_gsr, self.G)
         
-        self.S_R = [act(x) for x in self.S_R]
-        self.S_L = [act(x) for x in self.S_L]
+        self.S_R = np.array([act(x) for x in self.S_R])
+        self.S_L = np.array([act(x) for x in self.S_L])
 
         output = (self.R_w*sum(self.S_R)) - ((1-self.R_w)*sum(self.S_L)) 
 
@@ -249,7 +254,41 @@ class UnintuitiveCircuit():
 
         return output
     
+    def update_just_heading(self, heading):
+        """
+        Update based on just a heading change, assume goal neuron activity remains
+        constant
+
+        :param heading: The current heading of the agent in radians.
+        :return: Steering output (scaled difference between steering populations).
+        """
+        # compass update
+        self.C = np.array([act(np.cos(heading - cp)) for cp in self.C_prefs])
+        self.G = self.G.reshape(3)
+
+        self.S_L = np.dot(self.W_csl, self.C) + np.dot(self.W_gsl, self.G) 
+        self.S_R = np.dot(self.W_csr, self.C) + np.dot(self.W_gsr, self.G)
         
+        self.S_R = np.array([act(x) for x in self.S_R])
+        self.S_L = np.array([act(x) for x in self.S_L])
+
+
+        output = (self.R_w*sum(self.S_R)) - ((1-self.R_w)*sum(self.S_L)) 
+
+        # Sim heading update is 
+        # agent_heading -= steering
+        # so S_R drives left, S_L drives right
+
+        return output
+    
+    def zero_neurons(self):
+        """
+        Reset all neurons to have no activity
+        """
+        self.C.fill(0)
+        self.S_L.fill(0)
+        self.S_R.fill(0)
+        self.G.fill(0)
 
 class MP2024():
     """

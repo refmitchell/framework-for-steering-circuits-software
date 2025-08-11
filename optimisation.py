@@ -9,14 +9,23 @@ from scipy.optimize import differential_evolution
 
 import numpy as np
 import pickle as pkl
+import matplotlib.pyplot as plt
 
 import models
 import metrics
 
-
 mp2024_outputs = np.zeros((1,1))
 headings = np.zeros((1,1))
 goals = np.zeros((1,1))
+
+g_samples = 25
+
+fig, axs = plt.subplot_mosaic([['MP2024', 'UNINT']])
+for k in axs.keys():
+    axs[k].set_aspect('equal')
+
+plt.ion()
+plt.show()
 
 def precompute_mp2024_outputs(samples=100):
     """
@@ -38,6 +47,8 @@ def precompute_mp2024_outputs(samples=100):
     global mp2024_outputs
     global headings
     global goals
+    global fig
+    global axs
 
     indices = range(samples)
     x = np.linspace(0, 2*np.pi, samples)
@@ -50,6 +61,17 @@ def precompute_mp2024_outputs(samples=100):
     for x in indices:
         for y in indices:
             mp2024_outputs[x,y] = model.update(headings[x,y], goals[x,y])
+
+    axs['MP2024'].pcolormesh
+    axs['MP2024'].pcolormesh(mp2024_outputs)
+    axs['MP2024'].set_xticks([0, g_samples], labels=["$0\degree$", "$360\degree$"])
+    axs['MP2024'].set_yticks([0, g_samples], labels=["$0\degree$", "$360\degree$"])
+    axs['MP2024'].set_title("MP2024 steering output")
+    axs['MP2024'].set_ylabel("heading")
+    axs['MP2024'].set_xlabel("goal")
+
+    plt.draw()
+    plt.pause(0.00001)
 
     return headings, goals, mp2024_outputs
 
@@ -100,10 +122,35 @@ def optimisation_callback(res, convergence):
     :param res: The current result of the optimisation procedure.
     :param convergence: The degree of convergence of the current iteration.
     """
+    global mp2024_outputs
+    global fig
+    global axs
+    global headings
+    global g_samples
+
     print(res)
     print(convergence)
     print("RMSE: {}".format(objective(res)))
 
+    model = models.UnintuitiveCircuit(res)
+    outputs = np.zeros(headings.shape)
+
+    indices = range(g_samples)
+    for x in indices:
+        for y in indices:
+            outputs[x,y] = model.update(headings[x,y], goals[x,y])
+    
+
+    axs['UNINT'].pcolormesh(outputs)
+    axs['UNINT'].set_xticks([0, g_samples], labels=["$0\degree$", "$360\degree$"])
+    axs['UNINT'].set_yticks([0, g_samples], labels=["$0\degree$", "$360\degree$"])
+    axs['UNINT'].set_title("MP2024 steering output")
+    axs['UNINT'].set_ylabel("heading")
+    axs['UNINT'].set_xlabel("goal")
+
+    plt.draw()
+    plt.pause(0.00001)
+    fig.tight_layout()
 
 if __name__ == "__main__":
     """
@@ -115,7 +162,7 @@ if __name__ == "__main__":
     for the objective function. Increasing will also increase the time
     taken to run the optimisation procedure.
     """
-    precompute_mp2024_outputs(samples=50)
+    precompute_mp2024_outputs(samples=g_samples)
 
 
     """
@@ -129,7 +176,7 @@ if __name__ == "__main__":
     lower_bound = 0
 
     bounds = list(zip(np.zeros(18) + lower_bound, np.zeros(18) + upper_bound))
-    bounds.append((0.0,1.0))
+    bounds.append((0.5,0.5))
     
     print(bounds)
 
