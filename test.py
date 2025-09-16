@@ -18,6 +18,7 @@ plt.rcParams["mathtext.fontset"] = "cm"
 plt.rcParams["svg.fonttype"] = "none"
 
 from models import UnintuitiveCircuit, MP2024
+from anti_models import AntiRuleOne
 
 
 res = np.load("DICE_result.pkl", allow_pickle=True)
@@ -26,6 +27,7 @@ x = res.x
 
 samples = 10
 umodel = UnintuitiveCircuit(x, print_info=True)
+umodel = AntiRuleOne()
 
 model = MP2024()
 
@@ -43,23 +45,23 @@ for x in indices:
         umodel_outputs[x,y] = umodel.update(headings[x,y], goals[x,y])
         
 
-G_pref_x = [np.cos(x) for x in umodel.G_prefs]
-G_pref_y = [np.sin(y) for y in umodel.G_prefs]
+# G_pref_x = [np.cos(x) for x in umodel.G_prefs]
+# G_pref_y = [np.sin(y) for y in umodel.G_prefs]
 
-gsl_pref_x = [np.real(x) for x in umodel.GSL_pref_vecs]
-gsl_pref_y = [np.imag(x) for x in umodel.GSL_pref_vecs]
+# gsl_pref_x = [np.real(x) for x in umodel.GSL_pref_vecs]
+# gsl_pref_y = [np.imag(x) for x in umodel.GSL_pref_vecs]
 
-gsr_pref_x = [np.real(x) for x in umodel.GSR_pref_vecs]
-gsr_pref_y = [np.imag(x) for x in umodel.GSR_pref_vecs]
+# gsr_pref_x = [np.real(x) for x in umodel.GSR_pref_vecs]
+# gsr_pref_y = [np.imag(x) for x in umodel.GSR_pref_vecs]
 
-g0_x = [gsl_pref_x[0], gsr_pref_x[0]]
-g0_y = [gsl_pref_y[0], gsr_pref_y[0]]
+# g0_x = [gsl_pref_x[0], gsr_pref_x[0]]
+# g0_y = [gsl_pref_y[0], gsr_pref_y[0]]
 
-g1_x = [gsl_pref_x[1], gsr_pref_x[1]]
-g1_y = [gsl_pref_y[1], gsr_pref_y[1]]
+# g1_x = [gsl_pref_x[1], gsr_pref_x[1]]
+# g1_y = [gsl_pref_y[1], gsr_pref_y[1]]
 
-g2_x = [gsl_pref_x[2], gsr_pref_x[2]]
-g2_y = [gsl_pref_y[2], gsr_pref_y[2]]
+# g2_x = [gsl_pref_x[2], gsr_pref_x[2]]
+# g2_y = [gsl_pref_y[2], gsr_pref_y[2]]
 
 
 plt.subplot(211)

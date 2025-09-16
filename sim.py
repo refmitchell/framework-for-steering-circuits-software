@@ -7,13 +7,14 @@ with the models defined in models.py.
 
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams["font.family"] = "serif"
-plt.rcParams["font.serif"] = ["Times New Roman"]
-plt.rcParams["mathtext.fontset"] = "cm"
+plt.rcParams["svg.fonttype"] = "none"
 
 
 import util
+import metrics
 from models import MinimalCircuit, MP2024, UnintuitiveCircuit
+
+from anti_models import AntiRuleOne, AntiRuleFour, AntiRuleFive, AntiRuleSix
 
 
 def sim(model, goals, rate=50, duration=500):
@@ -45,43 +46,79 @@ def sim(model, goals, rate=50, duration=500):
     return headings
 
 
-def multi_sim():
+def multi_sim(anti_models=False):
     """
     Automatically run the simulation in sim() for multiple models and produce
     a plot showing the outputs for each, allowing comparison across models. This
     function will produce a plot output on disk.
+    
+    :param anti_models: Bool, if true the simulations will run with the anti-pattern
+                        model examples
     """
 
     # Open the result from the optimisation procedure. 
     pos_result = np.load("DICE_result.pkl", allow_pickle=True)
     
     # Define model list for test
-    models = [MP2024(), UnintuitiveCircuit(pos_result.x)] # MP2024 and unintuitive model
-    Ns = [3, 5, 8, 21]
-    regualar_models = [MinimalCircuit(n=n) for n in Ns] # Add a selection of uniform circuits
-    models += regualar_models
+    models = []
+    if anti_models:
+        models = [AntiRuleOne(), AntiRuleFour(), AntiRuleFive(), AntiRuleSix()]
+    else:
+        models = [MP2024(), UnintuitiveCircuit(pos_result.x)] # MP2024 and unintuitive model
+        Ns = [3, 5, 8, 21]
+        regular_models = [MinimalCircuit(n=n) for n in Ns] # Add a selection of uniform circuits
+        models += regular_models
+    
 
     duration = 1000
     variance = 0.3
-    goals = util.generate_track(show=False, variance=variance, length=duration)
+    goals = util.generate_track(variance=variance, length=duration)
 
-    f, axs = plt.subplots(len(models), 1, figsize=(8,1*len(models)), sharex=True)
+    f, axs = plt.subplots(len(models)+1, 1, figsize=(8,1*len(models)), sharex=True)
 
-    for idx in range(len(models)):
-        model = models[idx]
+    for idx in range(1, len(models)+1):
+        model = models[idx-1]
         headings = sim(model, goals, duration=duration)
 
-        goals = np.unwrap(goals)    
-        headings = np.unwrap(headings)
+        goals = np.array(goals) % (2*np.pi) 
+        headings = np.array(headings) % (2*np.pi) 
 
-        n_shifts = 10
-        shifts = np.arange(-n_shifts, (n_shifts+1), 1) * (2*np.pi)
+        # Split goal and heading traces into line segments which avoid
+        # crossing 0/2pi
+        goals_split = util.split_trace(goals, range(duration))
+        headings_split = util.split_trace(headings, range(duration))
+        
+        rmse = metrics.rmse(goals, headings, angular=True)
+
+        # goals = np.unwrap(goals)    
+        # headings = np.unwrap(headings)
+
+        # n_shifts = 2
+        # shifts = np.arange(-n_shifts, (n_shifts+1), 1) * (2*np.pi)
 
         ax = axs[idx]
        
-        for s in shifts:
-            ax.plot(range(duration), goals + s, c='tab:blue', alpha=0.3)
-            ax.plot(range(duration), headings + s, c='tab:red', alpha=0.3)
+        # for s in shifts:
+        #     ax.plot(range(duration), goals + s, c='tab:blue', alpha=0.3)
+        #     ax.plot(range(duration), headings + s, c='tab:red', alpha=0.3)
+
+        # Plot heading and line segments
+        for g in goals_split:    
+            split_goals = [y for (_, y) in g]
+            split_time = [x for (x, _) in g]
+            ax.plot(split_time, split_goals, c='lightsteelblue')
+
+        for h in headings_split:
+            split_headings = [y for (_, y) in h]
+            split_time = [x for (x, _) in h]
+            ax.plot(split_time, split_headings, c='lightcoral')
+
+        # Include RMSE 
+        output_rmse = np.round(np.degrees(rmse), decimals=2)
+        ax.text(900, np.pi, 
+                f'$\\epsilon = {output_rmse}\\degree$',
+                size=8,
+                bbox=dict(boxstyle='round', fc='w', ec='0.5', alpha=0.9))
 
         ax.set_ylabel(model.id)
 
@@ -90,13 +127,31 @@ def multi_sim():
         ax.set_yticklabels(["0", "$2\pi$"])
         ax.set_xlim([0, duration])
 
-        if idx == (len(models) - 1):
-            ax.set_xlabel("Time (s)")
+        if idx == len(models):
+            ax.set_xlabel('Time (s)')
+            
+
+    ax = axs[0]
+    for g in goals_split:    
+        split_goals = [y for (_, y) in g]
+        split_time = [x for (x, _) in g]
+        ax.plot(split_time, split_goals, c='lightsteelblue')
+
+    ax.set_ylabel("Goal")
+
+    ax.set_ylim([0, 2*np.pi])
+    ax.set_yticks([0, 2*np.pi])
+    ax.set_yticklabels(["0", "$2\pi$"])
+    ax.set_xlim([0, duration])    
+    
     
     plt.tight_layout()
-    plt.savefig("plots/uniform_network_tracks_{}.png".format(variance), dpi=400, bbox_inches="tight")
+    prefix = "anti" if anti_models else ""
+    filename = f"{prefix}model_tracks.svg"
+    plt.savefig(f"plots/{filename}", dpi=400, bbox_inches="tight")
 
 
 if __name__ == "__main__":
     multi_sim()
+    multi_sim(anti_models=True)
         

@@ -126,8 +126,8 @@ def generate_track(length=1000, bias=0, variance=0.872, random_state=None):
 
 def signed_angle(a,b):
     """
-    Method to compute the signed angle between two vectors a and b using the
-    perp dot product.
+    Method to compute the signed angle between two angular variables a and b.
+    Method uses the 'perp dot product' method.
 
     If the returned angle is greater than 0, b lies to the left of a. If
     the returned angle is less than 0, then b lies to the right of a. If 
@@ -143,12 +143,86 @@ def signed_angle(a,b):
     a_vec = np.exp(1j * a)
     b_vec = np.exp(1j * b)
 
-    a_perp = np.imag(a_vec) - np.real(a_vec)*1j
+    a_perp = -np.imag(a_vec) + np.real(a_vec)*1j
 
     a_dot_b = complex_dot(a_vec, b_vec)
     ap_dot_b = complex_dot(a_perp, b_vec)
 
     eta = np.arctan2(ap_dot_b, a_dot_b)
 
-    # if eta > 0, b lies left of a, and if eta < 0, b lies right of a.
     return eta
+
+def split_trace(angles, timesteps):
+    """
+    Given a timeseries which indicates the heading of an agent over time, 
+    this function will split the timeseries into different line segments
+    such that no line segment contains a crossing over 0/2pi. 
+    
+    This allows plotting the the different segments as lines such that there
+    are no awkward jumps across the plot.
+
+    Angles are expected to be in radians. The angles and timesteps arrays are 
+    expected to be the same length.
+
+    :param angles: Array-like, list of angles (y-values)
+    :param timesteps: Array-like, list of timesteps (x-values)
+    :return: A list of lists of 2-tuples. List is a line segment and each line
+             segment is made up of a set of (x,y) tuples.
+    """
+    assert(len(angles) == len(timesteps))
+    angles = angles % (2*np.pi)
+    
+    result = []
+    current_segment = []
+
+    for idx in range(len(angles) - 1):
+        angle = angles[idx]
+        next = angles[idx+1]
+        time = timesteps[idx]
+
+        # Jump from quadrant 4 to quadrant 1
+        positive_jump = angle >= ((5*np.pi)/4) and next <= ((3*np.pi)/4)
+
+        # Jump from quadrant 1 to quadrant 4
+        negative_jump = angle <= ((3*np.pi)/4) and next >= ((5*np.pi)/4)
+
+        split = positive_jump or negative_jump
+        current_segment.append((time, angle))
+
+        if split:
+            result.append(current_segment) # Store current segment
+            diff = inner_angle(angle, next)
+            time_next = timesteps[idx+1]
+
+            # Inject connecting line segments to avoid discontinuities in the
+            # resultant plot.
+            if positive_jump:
+                result.append([(time, angle), (time_next, angle+diff)])
+                result.append([(time, next-diff), (time_next, next)])
+            else:
+                result.append([(time, angle), (time_next, angle-diff)])
+                result.append([(time, next+diff), (time_next, next)])
+            
+            current_segment = [] # Reset for next segment
+
+    result.append(current_segment)
+
+    return result
+
+def inner_angle(a,b):
+    a_vec = np.exp(1j*a)
+    b_vec = np.exp(1j*b)
+
+    dot = np.real(a_vec)*np.real(b_vec) + np.imag(a_vec)*np.imag(b_vec)
+    return np.arccos(dot)
+
+
+def recover_encoded_angle(activities, prefs):
+    """
+    Given a set of neuron activities and their preferred firing directions,
+    compute the encoded angle.
+    """
+    vecs = [a*np.exp(1j*phi) for (a, phi) in zip(activities, prefs)]
+    angle = np.angle(np.sum(vecs))
+
+    return angle

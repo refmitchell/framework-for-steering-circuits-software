@@ -169,6 +169,9 @@ class UnintuitiveCircuit():
         # Compute vectors orthogonal to those in the left goal population
         l_perp = [ -np.imag(a) + 1j*np.real(a) for a in self.GSL_pref_vecs ]
 
+        # Test, change the perp to point in the other orthogonal direction
+        # l_perp = [ np.imag(a) - 1j*np.real(a) for a in self.GSL_pref_vecs ]
+
         # L perp dot right goals
         l_perp_dot_r = [ 
             (np.real(a)*np.real(b)) + (np.imag(a)*np.imag(b)) 
@@ -188,8 +191,18 @@ class UnintuitiveCircuit():
         # pi to get the true midpoint of the steering neurons (rather than just
         # the midpoint of the inner angle of the two vectors).
         
+        # Originally submitted line
+        # directed_midpoint =\
+        #     lambda p, s: p - (np.pi - (s*self.R_w)) if s > 0 else p + (s*self.R_w)
+
+        # Originally submitted with 'corrected' R_w application
+        # directed_midpoint =\
+        #     lambda p, s: p - (np.pi - (1 - s*self.R_w)) if s > 0 else p + (s*self.R_w)
+
+        # Correct result        
         directed_midpoint =\
-            lambda p, s: p - (np.pi - (s*self.R_w)) if s > 0 else p + (s*self.R_w)
+            lambda p, s: p + (s*self.R_w) if s > 0 else p - (np.pi - s*(1 - self.R_w))
+        
 
         self.G_prefs = [
             directed_midpoint(p,s) 
@@ -215,6 +228,8 @@ class UnintuitiveCircuit():
             print("GSR prefs: {}".format(np.degrees(np.angle(self.GSR_pref_vecs))))                
             print("G prefs: {}".format(np.degrees(self.G_prefs)))
             print("")      
+            print("R_w: {}".format(self.R_w))
+            print("")
 
 
     def update(self, heading, goal):
@@ -237,14 +252,17 @@ class UnintuitiveCircuit():
         self.S_R = [act(x) for x in self.S_R]
         self.S_L = [act(x) for x in self.S_L]
 
-        output = (self.R_w*sum(self.S_R)) - ((1-self.R_w)*sum(self.S_L))
+        # Submitted steering
+        # output = (self.R_w*sum(self.S_R)) - ((1-self.R_w)*sum(self.S_L))
+
+        # Corrected steering rule
+        output = ((1-self.R_w)*sum(self.S_L)) - (self.R_w*sum(self.S_R))
 
         # Sim heading update is 
         # agent_heading -= steering
         # so S_R drives left, S_L drives right
 
         return output
-    
         
 
 class MP2024():
@@ -310,7 +328,6 @@ class MP2024():
         # Return difference as steering output
         return 0.00018 * (L - R)
 
-
 def compute_steering(model, heading=0, degrees=True):
     """
     Compute the steering output function for a given model and heading.
@@ -327,130 +344,3 @@ def compute_steering(model, heading=0, degrees=True):
     goals = np.linspace(0, 2*np.pi, 100)
     outputs = [model.update(heading, g) for g in goals]
     return outputs, goals
-
-# def weight_solver(a1, a2, g, degrees=True):
-#     """
-#     [Legacy]
-#     Goal neuron direction is defined by the neurons innervated by that goal neuron.
-#     This function determines the weights required to generate a specific goal
-#     direction, given the preferred directions of two innervated steering neurons.
-
-#     [Warning]
-#     This function was not used and is untested.
-
-#     """
-#     if degrees:
-#         a1 = np.radians(a1)
-#         a2 = np.radians(a2)
-#         g = np.radians(g)
-
-
-#     def fun(w1):
-#         # Vector sum for given weights
-#         v = (w1*np.exp(1j*a1) + (1-w1)*np.exp(1j*a2))
-
-#         # Goal and perpendicular goal vector form axes
-#         g_vec = np.exp(1j*g)
-#         g_perp = np.exp(1j*(g - np.pi/2))
-        
-#         # Project V into those goal vector axes
-#         v = [np.real(v), np.imag(v)]
-#         g_vec = [np.real(g_vec), np.imag(g_vec)]
-#         g_perp = [np.real(g_perp), np.imag(g_perp)]
-#         x = np.dot(v, g_vec)
-#         y = np.dot(v, g_perp)
-
-#         # Return signed angle
-#         return np.arctan2(y,x)
-
-#     result = root_scalar(fun, bracket=(0.0,1.0))
-    
-#     return result.root
-
-# def full_steering(model):
-#     """
-#     Com
-#     """
-#     x = np.linspace(0, 2*np.pi, 100)
-#     x = itertools.combinations_with_replacement(x,2)
-
-#     [model.update(h,g) for (h,g) in x]
-
-# def unintuitive_circuit_error(x, x_target):
-#     model = UnintuitiveCircuit(x)
-#     model=MP2024()
-#     mp_model = MP2024()
-
-
-
-#     ui_outputs, ui_goals = compute_steering(model)
-#     mp_outputs, mp_goals = compute_steering(mp_model)
-
-#     return metrics.rmse(ui_outputs, mp_outputs)
-
-# def optimisation_callback(res, convergence):
-#     print(res)
-#     print(convergence)
-#     print("RMSE: {}".format(unintuitive_circuit_error(res)))
-
-
-# if __name__ == "__main__":
-#     x = np.zeros(18)
-    
-#     upper_bound = 1
-#     lower_bound = -1
-
-#     bounds = list(zip(np.zeros(18) + lower_bound, np.zeros(18) + upper_bound))
-    
-#     print(bounds)
-
-#     result = differential_evolution(
-#         unintuitive_circuit_error, 
-#         bounds,
-#         callback=optimisation_callback,
-#         maxiter=10000,
-#         workers=-1
-#         )
-
-#     with open("result.pkl", "wb") as f:
-#         pkl.dump(result, f)
-
-
-
-
-    # x = np.array([
-    #     0.09907804,
-    #     0.05067848,
-    #     0.09892858,
-    #     0.09723734,
-    #     0.00010732,
-    #     0.00028387,
-    #     0.00247871, 
-    #     0.00913901,
-    #     0.0006384,
-    #     0.00374457,
-    #     0.0980949,
-    #     0.09934664,
-    #     0.09460428,
-    #     0.09961601,
-    #     0.000223,
-    #     0.00119506,
-    #     0.00067859,
-    #     0.00178532])
-    # # a, b, corr = result.x
-    
-    # plt.subplot(111)
-    # model = UnintuitiveCircuit(x)
-    # outputs, goals = compute_steering(model)
-    # plt.plot(np.degrees(goals), outputs)
-
-    # model = MP2024()
-    # outputs, goals = compute_steering(model)
-    # plt.plot(np.degrees(goals), outputs)
-
-    # plt.show()
-
-    
-    
-
-    

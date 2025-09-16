@@ -13,6 +13,8 @@ import pickle as pkl
 import models
 import metrics
 
+from util import recover_encoded_angle
+
 
 mp2024_outputs = np.zeros((1,1))
 headings = np.zeros((1,1))
@@ -85,11 +87,31 @@ def objective(x):
     model = models.UnintuitiveCircuit(x)
     outputs = np.zeros(headings.shape)
 
+    # Steering output check
     for x in indices:
         for y in indices:
             outputs[x,y] = model.update(headings[x,y], goals[x,y])
 
-    return metrics.rmse(mp2024_outputs, outputs)
+    # decoding_weight = 0.01
+    # steering_weight = (1 - decoding_weight)
+    steering_error = metrics.rmse(mp2024_outputs, outputs)
+
+    # Decoding property check
+    # angles = np.linspace(0, 2*np.pi, 50)
+    # decoded_angles = []
+    # for a in angles:
+    #     model.update(0, a)
+    #     decoded_angles.append(recover_encoded_angle(model.G, model.G_prefs) % (2*np.pi))
+    
+    # decoded_angles = np.array(decoded_angles)
+    # decoding_error = metrics.rmse(angles, decoded_angles)
+    # # print("===========")
+    # # print(angles)
+    # # print(decoded_angles)
+
+    # combined_error = (decoding_weight*decoding_error) + (steering_weight*steering_error)
+
+    return steering_error
 
 def optimisation_callback(res, convergence):
     """
@@ -129,7 +151,7 @@ if __name__ == "__main__":
     lower_bound = 0
 
     bounds = list(zip(np.zeros(18) + lower_bound, np.zeros(18) + upper_bound))
-    bounds.append((0.0,1.0))
+    bounds.append((0.0, 1.0))
     
     print(bounds)
 
@@ -150,7 +172,7 @@ if __name__ == "__main__":
     Output the result to a python 'pickle' file. If the filename is not changed
     then old results will be overwritten.
     """
-    with open("result_positive_w_output_weight.pkl", "wb") as f:
+    with open("DICE_result.pkl", "wb") as f:
         pkl.dump(result, f)
 
 
