@@ -14,7 +14,7 @@ import util
 import metrics
 from models import MinimalCircuit, MP2024, UnintuitiveCircuit
 
-from anti_models import AntiRuleOne, AntiRuleFour, AntiRuleFive, AntiRuleSix
+from anti_models import AntiRuleOne, AntiRuleFour, AntiRuleFive
 
 
 def sim(model, goals, rate=50, duration=500):
@@ -62,7 +62,7 @@ def multi_sim(anti_models=False):
     # Define model list for test
     models = []
     if anti_models:
-        models = [AntiRuleOne(), AntiRuleFour(), AntiRuleFive(), AntiRuleSix()]
+        models = [AntiRuleOne(), AntiRuleFour(), AntiRuleFive()]
     else:
         models = [MP2024(), UnintuitiveCircuit(pos_result.x)] # MP2024 and unintuitive model
         Ns = [3, 5, 8, 21]
@@ -74,7 +74,11 @@ def multi_sim(anti_models=False):
     variance = 0.3
     goals = util.generate_track(variance=variance, length=duration)
 
-    f, axs = plt.subplots(len(models)+1, 1, figsize=(8,1*len(models)), sharex=True)
+
+    # Fudge factor so that trace axes are roughly the same heights
+    figsize = (8, len(models) + 1) if not anti_models else (8, (len(models) + 1)*1.05)
+
+    f, axs = plt.subplots(len(models)+1, 1, figsize=figsize, sharex=True)
 
     for idx in range(1, len(models)+1):
         model = models[idx-1]
@@ -87,11 +91,14 @@ def multi_sim(anti_models=False):
         # crossing 0/2pi
         goals_split = util.split_trace(goals, range(duration))
         headings_split = util.split_trace(headings, range(duration))
+        rmse_angle = metrics.rmse(goals, headings, angular=True)
         
-        rmse = metrics.rmse(goals, headings, angular=True)
+        goals_unwrapped = np.unwrap(goals)    
+        headings_unwrapped = np.unwrap(headings)
+        goals_deriv = np.ediff1d(goals_unwrapped)
+        headings_deriv = np.ediff1d(headings_unwrapped)
 
-        # goals = np.unwrap(goals)    
-        # headings = np.unwrap(headings)
+        rmse_deriv = metrics.rmse(goals_deriv, headings_deriv, angular=True)
 
         # n_shifts = 2
         # shifts = np.arange(-n_shifts, (n_shifts+1), 1) * (2*np.pi)
@@ -113,10 +120,15 @@ def multi_sim(anti_models=False):
             split_time = [x for (x, _) in h]
             ax.plot(split_time, split_headings, c='lightcoral')
 
+        # # Plot derivatives
+        # ax.plot(range(duration - 1), goals_deriv, c='lightsteelblue')
+        # ax.plot(range(duration - 1), headings_deriv, c='lightcoral')
+
         # Include RMSE 
-        output_rmse = np.round(np.degrees(rmse), decimals=2)
+        output_rmse = np.round(np.degrees(rmse_angle), decimals=2)
+        output_deriv_rmse = np.round(np.degrees(rmse_deriv), decimals=2)
         ax.text(900, np.pi, 
-                f'$\\epsilon = {output_rmse}\\degree$',
+                f"$\\epsilon = {output_rmse}\\degree$\n$\\nu = {output_deriv_rmse}\\degree$",
                 size=8,
                 bbox=dict(boxstyle='round', fc='w', ec='0.5', alpha=0.9))
 
@@ -125,6 +137,9 @@ def multi_sim(anti_models=False):
         ax.set_ylim([0, 2*np.pi])
         ax.set_yticks([0, 2*np.pi])
         ax.set_yticklabels(["0", "$2\pi$"])
+        # ax.set_ylim([-np.pi,np.pi]) 
+        # ax.set_yticks([-np.pi, 0, np.pi])
+        # ax.set_yticklabels(["$-\pi$", 0, "$2\pi$"])
         ax.set_xlim([0, duration])
 
         if idx == len(models):
@@ -146,9 +161,15 @@ def multi_sim(anti_models=False):
     
     
     plt.tight_layout()
+
+    # Save as png
     prefix = "anti" if anti_models else ""
-    filename = f"{prefix}model_tracks.svg"
+    filename = f"{prefix}model_tracks.png"
     plt.savefig(f"plots/{filename}", dpi=400, bbox_inches="tight")
+
+    # # Save as SVG
+    # filename.replace(".png", ".svg")
+    # plt.savefig(f"plots/{filename}", bbox_inches="tight")
 
 
 if __name__ == "__main__":

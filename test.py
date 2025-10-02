@@ -12,22 +12,18 @@ procedure.
 
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams["font.family"] = "serif"
-plt.rcParams["font.serif"] = ["Times New Roman"]
-plt.rcParams["mathtext.fontset"] = "cm"
-plt.rcParams["svg.fonttype"] = "none"
+# plt.rcParams["font.family"] = "serif"
+# plt.rcParams["font.serif"] = ["Times New Roman"]
+# plt.rcParams["mathtext.fontset"] = "cm"
+# plt.rcParams["svg.fonttype"] = "none"
 
 from models import UnintuitiveCircuit, MP2024
-from anti_models import AntiRuleOne
-
 
 res = np.load("DICE_result.pkl", allow_pickle=True)
 x = res.x
 
-
 samples = 10
 umodel = UnintuitiveCircuit(x, print_info=True)
-umodel = AntiRuleOne()
 
 model = MP2024()
 
@@ -90,4 +86,5 @@ plt.xlabel("goal")
 plt.gca().set_aspect('equal')
 
 plt.tight_layout()
-plt.show()
+plt.savefig("plots/optimisation.svg", bbox_inches="tight")
+# plt.show()
