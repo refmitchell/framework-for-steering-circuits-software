@@ -124,6 +124,45 @@ def generate_track(length=1000, bias=0, variance=0.872, random_state=None):
     # Return the headings
     return headings
 
+def generate_stepped_track(length=1000, steps=5):
+    """
+    Generate a strack which steps from 0 to 2pi and back over a provided duration.
+    :param length: the track duration
+    :param steps: the steps from 0 to 2pi (each jump will be 2pi/steps)
+    """
+
+    segment_length = int((length/steps)/2)
+    step = (2*np.pi)/steps
+
+    # Positive phase
+    current = 0
+    trace = []
+    for t in range(steps):
+        segment = [current for _ in range(segment_length)]
+        trace += segment
+        current += step
+
+    # Negative phase
+    for t in range(steps):
+        segment = [current for _ in range(segment_length)]
+        trace += segment
+        current -= step
+
+    return np.array(trace) % (2*np.pi)
+
+def generate_constant_turn_track(length=1000):
+    """
+    Generate a strack which steps from 0 to 2pi and back over a provided duration.
+    :param length: the track duration
+    :param steps: the steps from 0 to 2pi (each jump will be 2pi/steps)
+    """
+
+    segment_length = int(length/2)
+    first_segment = list(np.linspace(0, 2*np.pi, segment_length))
+    second_segment = list(np.linspace(2*np.pi, 0, segment_length))
+    trace = first_segment + second_segment
+    return np.array(trace) % (2*np.pi)
+
 def signed_angle(a,b):
     """
     Method to compute the signed angle between two angular variables a and b.
@@ -226,3 +265,41 @@ def recover_encoded_angle(activities, prefs):
     angle = np.angle(np.sum(vecs))
 
     return angle
+
+
+
+
+def act(x, slope=2, bias=0.6):
+    """
+    Neural activation function
+    :param x: The neural input
+    :return: Firing rate
+    """
+    return 1 / (1 + np.exp(-slope*(x - bias)))
+
+
+def plot_rate_wrt_angle(thetas):
+    """
+    Produce a plot of neuron firing rate with respect to the input angle
+    :param thetas: array of preferred firing directions
+    """
+    # Import the activation function
+    plt.subplot(111)
+
+    for theta in thetas:
+        samples = np.linspace(0, 2*np.pi, 100)
+        result = np.array([act(np.cos(s - theta)) for s in samples])
+        # result = np.array([np.cos(s - theta) for s in samples])
+        # result = np.array([x if x > 0 else 0 for x in result])
+
+        plt.plot(np.degrees(samples), result, label=f'pfd = {np.degrees(theta)}')
+
+    plt.title('firing rate over angular domain')
+    plt.ylabel('rate')
+    plt.xlabel('input angle (deg)')
+    plt.legend()
+    plt.show()
+
+if __name__ == "__main__":
+    thetas = [0, 120, 60]
+    plot_rate_wrt_angle(np.radians(thetas))

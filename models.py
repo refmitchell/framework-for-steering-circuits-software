@@ -17,7 +17,7 @@ def act(x):
     :return: Firing rate
     """
     return 1 / (1 + np.exp(-2*(x - 0.6)))
-    
+   
 class MinimalCircuit():
     """
     A general implementation of 'Uniformly spaced' steering circuits. That is,

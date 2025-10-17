@@ -14,7 +14,7 @@ import util
 import metrics
 from models import MinimalCircuit, MP2024, UnintuitiveCircuit
 
-from anti_models import AntiRuleOne, AntiRuleFour, AntiRuleFive
+from anti_models import AntiRuleOne, AntiRuleFour, AntiRuleFive, AntiRuleOneAndFive
 
 
 def sim(model, goals, rate=50, duration=500):
@@ -46,7 +46,7 @@ def sim(model, goals, rate=50, duration=500):
     return headings
 
 
-def multi_sim(anti_models=False):
+def multi_sim(anti_models=False, stepped=False):
     """
     Automatically run the simulation in sim() for multiple models and produce
     a plot showing the outputs for each, allowing comparison across models. This
@@ -56,14 +56,25 @@ def multi_sim(anti_models=False):
                         model examples
     """
 
+    assert(not (stepped and anti_models))
+
     # Open the result from the optimisation procedure. 
     pos_result = np.load("DICE_result.pkl", allow_pickle=True)
     
     # Define model list for test
     models = []
     if anti_models:
-        models = [AntiRuleOne(), AntiRuleFour(), AntiRuleFive()]
+        # Run simulations for antimodel figure
+        models = [AntiRuleOne(), AntiRuleFour(), AntiRuleFive(), AntiRuleOneAndFive()]
+    elif stepped:
+        models = [MP2024(), UnintuitiveCircuit(pos_result.x)]
+        Ns = [3]
+        regular_models = [MinimalCircuit(n=n) for n in Ns] # Add a selection of uniform circuits
+        antimodels = [AntiRuleOne(), AntiRuleOneAndFive()]
+        models += regular_models
+        models += antimodels
     else:
+        # Run simulation for functional equivalence figure
         models = [MP2024(), UnintuitiveCircuit(pos_result.x)] # MP2024 and unintuitive model
         Ns = [3, 5, 8, 21]
         regular_models = [MinimalCircuit(n=n) for n in Ns] # Add a selection of uniform circuits
@@ -73,7 +84,9 @@ def multi_sim(anti_models=False):
     duration = 1000
     variance = 0.3
     goals = util.generate_track(variance=variance, length=duration)
-
+    
+    if stepped:
+        goals = util.generate_constant_turn_track(length=duration)
 
     # Fudge factor so that trace axes are roughly the same heights
     figsize = (8, len(models) + 1) if not anti_models else (8, (len(models) + 1)*1.05)
@@ -95,19 +108,16 @@ def multi_sim(anti_models=False):
         
         goals_unwrapped = np.unwrap(goals)    
         headings_unwrapped = np.unwrap(headings)
-        goals_deriv = np.ediff1d(goals_unwrapped)
-        headings_deriv = np.ediff1d(headings_unwrapped)
-
-        rmse_deriv = metrics.rmse(goals_deriv, headings_deriv, angular=True)
-
-        # n_shifts = 2
-        # shifts = np.arange(-n_shifts, (n_shifts+1), 1) * (2*np.pi)
 
         ax = axs[idx]
-       
-        # for s in shifts:
-        #     ax.plot(range(duration), goals + s, c='tab:blue', alpha=0.3)
-        #     ax.plot(range(duration), headings + s, c='tab:red', alpha=0.3)
+
+        if stepped and model.id == 'Rule 1' or anti_models and model.id == 'Rule 1':
+            ax.fill_between(range(len(headings)), np.radians(40), np.radians(80), color='tab:grey', alpha=0.2)
+            ax.fill_between(range(len(headings)), np.radians(220), np.radians(260), color='tab:grey', alpha=0.2)
+            
+        elif stepped and model.id == '1 and 5' or anti_models and model.id == '1 and 5':
+            ax.fill_between(range(len(headings)), np.radians(40), np.radians(80), color='tab:grey', alpha=0.2)
+            ax.fill_between(range(len(headings)), np.radians(220), np.radians(260), color='tab:grey', alpha=0.2)
 
         # Plot heading and line segments
         for g in goals_split:    
@@ -120,26 +130,20 @@ def multi_sim(anti_models=False):
             split_time = [x for (x, _) in h]
             ax.plot(split_time, split_headings, c='lightcoral')
 
-        # # Plot derivatives
-        # ax.plot(range(duration - 1), goals_deriv, c='lightsteelblue')
-        # ax.plot(range(duration - 1), headings_deriv, c='lightcoral')
-
         # Include RMSE 
         output_rmse = np.round(np.degrees(rmse_angle), decimals=2)
-        output_deriv_rmse = np.round(np.degrees(rmse_deriv), decimals=2)
+        
         ax.text(900, np.pi, 
-                f"$\\epsilon = {output_rmse}\\degree$\n$\\nu = {output_deriv_rmse}\\degree$",
+                f"$\\epsilon = {output_rmse}\\degree$",
                 size=8,
-                bbox=dict(boxstyle='round', fc='w', ec='0.5', alpha=0.9))
+                bbox=dict(boxstyle='round', fc='w', ec='0.5', alpha=0.9))                
+    
 
         ax.set_ylabel(model.id)
 
         ax.set_ylim([0, 2*np.pi])
         ax.set_yticks([0, 2*np.pi])
-        ax.set_yticklabels(["0", "$2\pi$"])
-        # ax.set_ylim([-np.pi,np.pi]) 
-        # ax.set_yticks([-np.pi, 0, np.pi])
-        # ax.set_yticklabels(["$-\pi$", 0, "$2\pi$"])
+        ax.set_yticklabels(["$0\degree$", "$360\degree$"])
         ax.set_xlim([0, duration])
 
         if idx == len(models):
@@ -156,23 +160,25 @@ def multi_sim(anti_models=False):
 
     ax.set_ylim([0, 2*np.pi])
     ax.set_yticks([0, 2*np.pi])
-    ax.set_yticklabels(["0", "$2\pi$"])
+    ax.set_yticklabels(["$0\degree$", "$360\degree$"])
     ax.set_xlim([0, duration])    
     
     
     plt.tight_layout()
 
     # Save as png
-    prefix = "anti" if anti_models else ""
-    filename = f"{prefix}model_tracks.png"
+    filename = "unnamed.png"
+    if anti_models:
+        filename = "antimodel_tracks.png"
+    elif stepped:
+        filename = "stepped_model_tracks.png"
+    else:
+        filename = "model_tracks.png"
+    
     plt.savefig(f"plots/{filename}", dpi=400, bbox_inches="tight")
-
-    # # Save as SVG
-    # filename.replace(".png", ".svg")
-    # plt.savefig(f"plots/{filename}", bbox_inches="tight")
-
 
 if __name__ == "__main__":
     multi_sim()
     multi_sim(anti_models=True)
+    multi_sim(stepped=True)
         
