@@ -7,7 +7,7 @@ with the models defined in models.py.
 
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams["svg.fonttype"] = "none"
+plt.rcParams["svg.fonttype"] = "none" # Export svgs with text
 
 
 import util
@@ -46,7 +46,7 @@ def sim(model, goals, rate=50, duration=500):
     return headings
 
 
-def multi_sim(anti_models=False, stepped=False):
+def multi_sim(anti_models=False, continuous=False, stepped=False, step_size=None):
     """
     Automatically run the simulation in sim() for multiple models and produce
     a plot showing the outputs for each, allowing comparison across models. This
@@ -54,8 +54,13 @@ def multi_sim(anti_models=False, stepped=False):
     
     :param anti_models: Bool, if true the simulations will run with the anti-pattern
                         model examples
+    :param continuous: Bool, run continuous turn simulation
+    :param stepped: Bool, run stepped simulation
+    :param step_size: If stepped, this will be the step size used. Ignored otherwise.
     """
 
+    assert(not (continuous and anti_models))
+    assert(not (continuous and stepped))
     assert(not (stepped and anti_models))
 
     # Open the result from the optimisation procedure. 
@@ -66,7 +71,7 @@ def multi_sim(anti_models=False, stepped=False):
     if anti_models:
         # Run simulations for antimodel figure
         models = [AntiRuleOne(), AntiRuleFour(), AntiRuleFive(), AntiRuleOneAndFive()]
-    elif stepped:
+    elif continuous or stepped:
         models = [MP2024(), UnintuitiveCircuit(pos_result.x)]
         Ns = [3]
         regular_models = [MinimalCircuit(n=n) for n in Ns] # Add a selection of uniform circuits
@@ -85,8 +90,12 @@ def multi_sim(anti_models=False, stepped=False):
     variance = 0.3
     goals = util.generate_track(variance=variance, length=duration)
     
-    if stepped:
+    if continuous:
         goals = util.generate_constant_turn_track(length=duration)
+
+    if stepped:
+        # Stepped tracks use degrees by default.
+        goals = np.radians(util.generate_stepped_track(length=duration, step_size=step_size))
 
     # Fudge factor so that trace axes are roughly the same heights
     figsize = (8, len(models) + 1) if not anti_models else (8, (len(models) + 1)*1.05)
@@ -111,11 +120,11 @@ def multi_sim(anti_models=False, stepped=False):
 
         ax = axs[idx]
 
-        if stepped and model.id == 'Rule 1' or anti_models and model.id == 'Rule 1':
+        if (continuous or stepped) and model.id == 'Breaking\nRule 1' or anti_models and model.id == 'Breaking\nRule 1':
             ax.fill_between(range(len(headings)), np.radians(40), np.radians(80), color='tab:grey', alpha=0.2)
             ax.fill_between(range(len(headings)), np.radians(220), np.radians(260), color='tab:grey', alpha=0.2)
             
-        elif stepped and model.id == '1 and 5' or anti_models and model.id == '1 and 5':
+        elif (continuous or stepped) and model.id == 'Breaking\n1 and 5' or anti_models and model.id == 'Breaking\n1 and 5':
             ax.fill_between(range(len(headings)), np.radians(40), np.radians(80), color='tab:grey', alpha=0.2)
             ax.fill_between(range(len(headings)), np.radians(220), np.radians(260), color='tab:grey', alpha=0.2)
 
@@ -167,18 +176,24 @@ def multi_sim(anti_models=False, stepped=False):
     plt.tight_layout()
 
     # Save as png
-    filename = "unnamed.png"
+    extension = "svg"
+    filename = f"unnamed.{extension}"
     if anti_models:
-        filename = "antimodel_tracks.png"
+        filename = f"antimodel_tracks.{extension}"
+    elif continuous:
+        filename = f"continuous_model_tracks.{extension}"
     elif stepped:
-        filename = "stepped_model_tracks.png"
+        filename = f"stepped_model_tracks_{step_size}deg.{extension}"
     else:
-        filename = "model_tracks.png"
+        filename = f"model_tracks.{extension}"
     
     plt.savefig(f"plots/{filename}", dpi=400, bbox_inches="tight")
 
 if __name__ == "__main__":
     multi_sim()
     multi_sim(anti_models=True)
-    multi_sim(stepped=True)
+    multi_sim(continuous=True)
+    multi_sim(stepped=True, step_size=60)
+    multi_sim(stepped=True, step_size=30)
+    multi_sim(stepped=True, step_size=90)
         

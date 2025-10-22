@@ -41,7 +41,7 @@ class AntiRuleOne(AntiCircuit):
     Provides a model in which compass pfds do not form a positve basis.
     """
     def __init__(self):
-        self.id = "Rule 1"
+        self.id = "Breaking\nRule 1"
         self.C_prefs = np.radians(np.array([0, 120, 60]))        
         self.G_prefs = np.radians(np.array([60, 270, 210]))
 
@@ -63,7 +63,7 @@ class AntiRuleOneAndFive(AntiCircuit):
     Provides a model in which compass pfds do not form a positve basis.
     """
     def __init__(self):
-        self.id = "1 and 5"
+        self.id = "Breaking\n1 and 5"
         self.C_prefs = np.radians(np.array([0, 60, 120]))        
         self.G_prefs = np.radians(np.array([30, 90, 180]))
 
@@ -87,7 +87,7 @@ class AntiRuleFour(AntiCircuit):
     innervated steering neurons.
     """
     def __init__(self):
-        self.id = "Rule 4"
+        self.id = "Breaking\nRule 4"
         self.C_prefs = np.radians(np.array([240, 0, 120]))
         self.G_prefs = np.radians(np.array([120, 240, 0]))
 
@@ -110,7 +110,7 @@ class AntiRuleFive():
     Provides a circuit in which goal neurons do not form a positive basis.
     """
     def __init__(self):
-        self.id = "Rule 5"
+        self.id = "Breaking\nRule 5"
         self.C_prefs = np.radians(np.array([240, 0, 120]))
         self.G_prefs = np.radians(np.array([-60, 0, 180]))
 
@@ -222,7 +222,6 @@ class TwoNeuronOpt(AntiCircuit):
     def __init__(self, x, print_info=False):
         self.id = "TwoNeuronOpt"
         self.C_prefs = np.radians(np.array([x[0], x[1]]))        
-        # self.G_prefs = np.radians(np.array([x[2], x[3]]))
 
         self.C = np.array((2,1))
         self.S_L = np.array((2,1))

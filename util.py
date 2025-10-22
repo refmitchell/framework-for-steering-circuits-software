@@ -124,31 +124,56 @@ def generate_track(length=1000, bias=0, variance=0.872, random_state=None):
     # Return the headings
     return headings
 
-def generate_stepped_track(length=1000, steps=5):
+def generate_stepped_track(length=1000, step_size=72, degrees=True):
     """
-    Generate a strack which steps from 0 to 2pi and back over a provided duration.
+    Generate a strack which steps from 0 to 360 degrees and back over a provided 
+    duration. The step size is provided as a parameter and this dictates the
+    length of each segment. It is assumed that step_size divides 360 with no
+    remainder.
+
+    The result is returned in the input units.
+    
     :param length: the track duration
-    :param steps: the steps from 0 to 2pi (each jump will be 2pi/steps)
+    :param step_size: the step size
+    :param degrees: True if step_size is given in degrees, False for radians.
     """
 
-    segment_length = int((length/steps)/2)
-    step = (2*np.pi)/steps
+    # Step size in correct units
+    step = np.radians(step_size)
+    if not degrees:
+        step = step_size
 
+    # Number of steps in half a simulation
+    n_steps = int((2*np.pi)/step)
+    
+    # Segment length for each step
+    segment_length = int((length/n_steps)/2)
+    
     # Positive phase
     current = 0
     trace = []
-    for t in range(steps):
+    for t in range(n_steps):
         segment = [current for _ in range(segment_length)]
         trace += segment
         current += step
 
     # Negative phase
-    for t in range(steps):
+    for t in range(n_steps):
         segment = [current for _ in range(segment_length)]
         trace += segment
         current -= step
 
-    return np.array(trace) % (2*np.pi)
+    # Trace may not be the right length depending on step size. Fill in remaining
+    # elements with the last item in the trace.
+    n_residual = length - len(trace)
+    final_result = trace[-1]
+    trace += [final_result for _ in range(n_residual)]
+
+    result = np.array(trace) % (2*np.pi)
+    if degrees:
+       result = np.degrees(result) 
+
+    return result
 
 def generate_constant_turn_track(length=1000):
     """
