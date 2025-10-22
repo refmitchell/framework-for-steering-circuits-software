@@ -18,8 +18,10 @@ To reproduce our random walk simulations, simply run:
 
 ```$ python sim.py```
 
-This will produce three files `model_tracks.png`, `antimodel_tracks.png`, and `stepped_model_tracks.png` in the plots subdirectory.
-The first two are the random walk simulations for the rule-following and rule-breaking circuits respectively, the last is the continuous turn simulation.
+This will produce six files `model_tracks.svg`, `antimodel_tracks.svg`, `continuous_model_tracks.svg`, `stepped_model_tracks_30deg.svg`, `stepped_model_tracks_60deg.svg`, and `stepped_model_tracks_90deg.svg`in the plots subdirectory.
+The first two are the random walk simulations for the rule-following and rule-breaking circuits respectively, the third is the continuous turn simulation.
+The final three are step change simulations with step sizes of 30, 60, and 90 degrees respectively. 
+These are included as supplementary information in the paper.
 It is also possible to modify these simulations by modifying the parameters in the code. 
 
 ## Contact
