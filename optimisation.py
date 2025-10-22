@@ -11,7 +11,6 @@ import numpy as np
 import pickle as pkl
 
 import models
-import anti_models
 import metrics
 
 from util import recover_encoded_angle
@@ -93,24 +92,7 @@ def objective(x):
         for y in indices:
             outputs[x,y] = model.update(headings[x,y], goals[x,y])
 
-    # decoding_weight = 0.01
-    # steering_weight = (1 - decoding_weight)
     steering_error = metrics.rmse(mp2024_outputs, outputs)
-
-    # Decoding property check
-    # angles = np.linspace(0, 2*np.pi, 50)
-    # decoded_angles = []
-    # for a in angles:
-    #     model.update(0, a)
-    #     decoded_angles.append(recover_encoded_angle(model.G, model.G_prefs) % (2*np.pi))
-    
-    # decoded_angles = np.array(decoded_angles)
-    # decoding_error = metrics.rmse(angles, decoded_angles)
-    # # print("===========")
-    # # print(angles)
-    # # print(decoded_angles)
-
-    # combined_error = (decoding_weight*decoding_error) + (steering_weight*steering_error)
 
     return steering_error
 
